@@ -16,20 +16,22 @@ public class Tracer {
         threadList.add(new WrapperThread(t));
     }
  
-    static {
-        new Thread(() -> {
-                System.out.println("Monitoring Deadlocks");
+    public static void startDeadLockMonitor() {
+        Thread monitoringThread = new Thread(() -> {
+                System.out.println("---------Monitoring Deadlocks---------");
                 while (Thread.activeCount() >= 2) deadLockMonitor();
-        }, "DeadLock Monitor").start();
+        }, "DeadLock Monitor");
+        monitoringThread.setDaemon(true);
+		monitoringThread.start();
     }
  
     private static void deadLockMonitor() {
         ThreadMXBean mx = ManagementFactory.getThreadMXBean();
         long[] DevilThreads = mx.findDeadlockedThreads();
         if (DevilThreads != null && DevilThreads.length > 0) {
-            System.out.println(currentTime() + " :: Deadlock detected");
+            System.out.println(currentTime() + " :: Deadlock detected ##########");
             for (int i = 0; i < DevilThreads.length; i++) {
-                System.out.println("Thread id :" + DevilThreads[i]);
+                System.out.println("########## Thread id :" + DevilThreads[i]);
             }
             System.out.println("Exiting from system");
             System.exit(0);
