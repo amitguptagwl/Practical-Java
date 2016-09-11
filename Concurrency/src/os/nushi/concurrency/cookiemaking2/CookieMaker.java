@@ -146,6 +146,7 @@ public class CookieMaker {
         System.out.println(Thread.currentThread().getName() + " :: Quantity require:" + quantity);
         while (!container.getIngredient(quantity)) {
             container.empty.await();
+            //Thread.sleep(500); //Uncomment me to create deadlock
         }
         System.out.println(Thread.currentThread().getName() + " :: Taken  " + ingredient.toString());
         container.unlock();
