@@ -21,6 +21,14 @@ public class WrapperThread{
 		}
 		return false;
 	}
+	
+	public boolean isStuck(){
+		State state = originalThread.getState();
+		if(state == Thread.State.BLOCKED || state == Thread.State.TIMED_WAITING || state == Thread.State.WAITING){
+			return true;
+		}
+		return false;
+    }
 
 	public State currentState() {
 		return originalThread.getState();

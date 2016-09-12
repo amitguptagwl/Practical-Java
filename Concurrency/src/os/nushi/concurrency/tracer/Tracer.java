@@ -1,19 +1,24 @@
 package os.nushi.concurrency.tracer;
 
+import java.lang.Thread.State;
 import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.sql.Timestamp;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.locks.Lock;
 
 public class Tracer {
-    private ArrayList <WrapperThread> threadList;
+    private static List<WrapperThread> threadList = new CopyOnWriteArrayList<WrapperThread>();
+    private static List<Lock> locksList = new CopyOnWriteArrayList<Lock>();
 
-    Tracer() {
-        threadList = new ArrayList < WrapperThread > ();
-    }
- 
-    public void add(Thread t) {
+    public static void add(Thread t) {
         threadList.add(new WrapperThread(t));
+    }
+    
+    public static void add(Lock l) {
+    	locksList.add(l);
     }
  
     public static void startDeadLockMonitor() {
@@ -27,34 +32,57 @@ public class Tracer {
  
     private static void deadLockMonitor() {
         ThreadMXBean mx = ManagementFactory.getThreadMXBean();
-        long[] DevilThreads = mx.findDeadlockedThreads();
-        if (DevilThreads != null && DevilThreads.length > 0) {
+        mx.setThreadContentionMonitoringEnabled(true);
+        checkDeadLock(mx.findDeadlockedThreads());
+        checkDeadLock(mx.findMonitorDeadlockedThreads());
+        
+    }
+
+	private static void checkDeadLock(long[] lockedThreads) {
+		if (lockedThreads != null && lockedThreads.length > 0) {
             System.out.println(currentTime() + " :: Deadlock detected ##########");
-            for (int i = 0; i < DevilThreads.length; i++) {
-                System.out.println("########## Thread id :" + DevilThreads[i]);
+            for (int i = 0; i < lockedThreads.length; i++) {
+                System.out.println("########## Thread id :" + lockedThreads[i]);
             }
             System.out.println("Exiting from system");
             System.exit(0);
         }
-    }
+	}
  
-    public void trace() {
-        new Thread(() -> {
+    public static void trace() {
+        Thread tracerThread = new Thread(() -> {
                 while (Thread.activeCount() >= 2) {
                     if (isStateChanged()) System.out.println (currentTime() + " :: "+threadList);
                 }
-        }, "Tracer").start();
+        }, "Tracer");
+        tracerThread.setDaemon(true);
+        tracerThread.start();
     }
  
-    private boolean isStateChanged(){
+    private static boolean isStateChanged(){
+    	boolean allStuck = false;
     	for (WrapperThread wT : threadList) {
     		//if(!wT.originalThread.isAlive()) //remove wT
+    		if(wT.isStuck()) 
+    			allStuck &= true;
+    		else 
+    			allStuck &= false;
     		if(wT.isStateChanged()) return true;
 		}
+    	if(allStuck){
+    		for (WrapperThread wT : threadList) {
+    			dumpLocks(wT.originalThread);
+    		}
+    	}
     	return false;
     }
- 
-    public static String currentTime() {
+    
+    private static void dumpLocks(Thread t) {
+    	ThreadInfo threadInfo = ManagementFactory.getThreadMXBean().getThreadInfo(t.getId());
+    	System.out.println(t.getName() + " has lock : " + threadInfo.getLockName());
+	}
+
+	public static String currentTime() {
         return (new Timestamp(System.currentTimeMillis())).toString();
     }
 }
