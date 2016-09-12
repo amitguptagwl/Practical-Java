@@ -12,6 +12,8 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+
+import os.nushi.concurrency.tracer.Tracer;
  
 /*
 * CookieMaker bakes N cookies at a time. He can bake 1 type of cookie only
@@ -70,7 +72,9 @@ public class CookieMaker {
     	bakingCapacity.acquire();
 	        System.out.println("I am free to bake " + bakingCapacity.availablePermits() + " more cookies.");
 	        
-	        new Thread(() -> start(), "Maker_"+ counter++).start();
+	        Thread makerThread = new Thread(() -> start(), "Maker_"+ counter++);
+	        Tracer.add(makerThread);
+	        makerThread.start();
         bakingCapacity.release();
     }
     
@@ -130,6 +134,13 @@ public class CookieMaker {
     	return 0;
     }
     
+	//Race condition ::
+    //If maker dint find enough material it waits and notify other threads.
+    //so that the filler can fill the container
+    //But it let's other maker access the container too.
+	//In result all makers start waiting. As soon as filler fills the container it signals
+	//And all waiting makers race to acquire container. Whoever wins back the cookie first
+    
     /**
      * Take material from a container. Wait if container is empty.
      * @param ingredient
@@ -139,17 +150,16 @@ public class CookieMaker {
      */
     private Integer getMaterial(final Ingredient ingredient) throws InterruptedException, Exception {
         IngredientContainer container = containers.get(ingredient);
-        container.lock();
-        System.out.println(Thread.currentThread().getName() + " :: Taking "+ ingredient.toString() + " from " + container.TYPE + " container");
-        
         int quantity = cookie.getIngredients().get(ingredient);
         System.out.println(Thread.currentThread().getName() + " :: Quantity require:" + quantity);
+        container.lock();
         while (!container.getIngredient(quantity)) {
             container.empty.await();
             //Thread.sleep(500); //Uncomment me to create deadlock
         }
-        System.out.println(Thread.currentThread().getName() + " :: Taken  " + ingredient.toString());
         container.unlock();
+        System.out.println(Thread.currentThread().getName() + " :: Taken  " + ingredient.toString());
+        
         return quantity;
  
     }

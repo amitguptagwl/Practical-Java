@@ -53,17 +53,20 @@ public class IngredientContainer {
         return toBeFilled;
     }
  
+    //Multiple threads can access it at a time
     public boolean getIngredient(int n) throws Exception {
-    	//System.out.println(TYPE.toString() + " Container has " + getQuantityHeld() + " more matrial" );
-        if (n > CAPACITY) {
-            throw new Exception("Accessing quantity more than capacity");
-        }
+    	System.out.println(TYPE.toString() + " Container has " + getQuantityHeld() + " only." );
+        
+    	if (n > CAPACITY) throw new Exception("Accessing quantity more than capacity");
+    	lock();
         if (quantityHeld >= n) {
             TimeUnit.SECONDS.sleep(2);
+            System.out.println(Thread.currentThread().getName() + " :: Taking " + n  );
             quantityHeld -= n;
+            unlock();
             return true;
         }
- 
+        unlock();
         //System.out.println("Less Quantity Held");
         return false;
     }

@@ -8,6 +8,7 @@ public class CookieMakerStarter {
     public static void main(String[] args) throws Exception {
        
     	Tracer.startDeadLockMonitor();
+    	Tracer.trace();
     	
         CookieMaker cm = new CookieMaker();
         
