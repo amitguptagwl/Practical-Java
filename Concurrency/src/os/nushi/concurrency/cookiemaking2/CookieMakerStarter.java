@@ -27,7 +27,7 @@ public class CookieMakerStarter {
         fillingWorker.addContainer(chokoPowderContainer);
         
         fillingWorker.addContainer(wheatPowderContainer);
-        fillingWorker.start();
+        fillingWorker.start(); //Comment it to create live lock
 
         cm.addContainer(chokoPowderContainer);
         cm.addContainer(wheatPowderContainer);

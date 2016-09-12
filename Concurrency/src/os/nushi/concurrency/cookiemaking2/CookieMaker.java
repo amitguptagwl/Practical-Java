@@ -113,6 +113,7 @@ public class CookieMaker {
                 tasks.add(pool.submit(new Callable<Integer> () {
                     @Override
                     public Integer call() throws Exception {
+                    	Tracer.add(Thread.currentThread());
                         return getMaterial(ingredient);
                     }
                 }));
@@ -155,7 +156,8 @@ public class CookieMaker {
         container.lock();
         while (!container.getIngredient(quantity)) {
             container.empty.await();
-            //Thread.sleep(500); //Uncomment me to create deadlock
+            //container.empty.await(1000, TimeUnit.MILLISECONDS);//For live lock
+            //Thread.sleep(500); //For deadlock
         }
         container.unlock();
         System.out.println(Thread.currentThread().getName() + " :: Taken  " + ingredient.toString());
